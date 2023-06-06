@@ -1,0 +1,177 @@
+---
+title: "Code of Fallacies in the Global Water Crisis statistics"
+subtitle: "R code"
+author: "Arnald Puy"
+header-includes:
+  - \usepackage[font=footnotesize]{caption}
+  - \usepackage{dirtytalk}
+  - \usepackage{booktabs}
+  - \usepackage{tabulary}
+  - \usepackage{enumitem}
+  - \usepackage{lmodern}
+  - \usepackage[T1]{fontenc}
+  - \usepackage{tikz}
+output:
+  pdf_document:
+    fig_caption: yes
+    number_sections: yes
+    toc: yes
+    toc_depth: 2
+    keep_tex: true
+  word_document:
+    toc: no
+    toc_depth: '2'
+  html_document:
+    keep_md: true
+link-citations: yes
+fontsize: 11pt
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, dev = "tikz", cache = TRUE)
+```
+
+\newpage
+
+```{r, results="hide", message=FALSE, warning=FALSE, cache=FALSE}
+
+# PRELIMINARY -----------------------------------------------------------------
+
+sensobol::load_packages(c("sensobol", "tidyverse", "data.table", "cowplot"))
+
+
+theme_AP <- function() {
+  theme_bw() +
+    theme(panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          legend.background = element_rect(fill = "transparent",
+                                           color = NA),
+          legend.margin=margin(0, 0, 0, 0),
+          legend.box.margin=margin(-5,-5,-5,-5), 
+          legend.key = element_rect(fill = "transparent",
+                                    color = NA), 
+          strip.background = element_rect(fill = "white"), 
+          axis.title = element_text(size = 9), 
+          legend.text = element_text(size = 9), 
+          legend.title = element_text(size = 9), 
+          legend.key.width = unit(0.3, "cm"),
+          legend.key.height = unit(0.3, "cm"))
+}
+
+```
+
+```{r calculations}
+
+# SETTINGS #####################################################################
+
+# Values used in the paper
+precipitation_estimate <- 120000
+precipitation_min <- precipitation_estimate - (precipitation_estimate * 0.1)
+precipitation_max <- precipitation_estimate + (precipitation_estimate * 0.1)
+
+land_runoff_estimate <- 46000
+land_runoff_min <- land_runoff_estimate - (land_runoff_estimate  * 0.1)
+land_runoff_max <- land_runoff_estimate + (land_runoff_estimate  * 0.1)
+
+# SAMPLE MATRIX ################################################################
+
+N <- 2^12
+params <- c("precipitation", "green_water_consumption_crops", 
+            "global_green_water_consumption", "global_consumption", 
+            "planetary_boundary")
+
+mat <- sobol_matrices(N = N, params = params)
+
+mat[, "precipitation"] <- floor(qunif(mat[, "precipitation"], precipitation_min, precipitation_max))
+mat[, "green_water_consumption_crops"] <- floor(qunif(mat[, "green_water_consumption_crops"], 5200, 5800))
+mat[, "global_green_water_consumption"] <- floor(qunif(mat[, "global_green_water_consumption"], 68200, 68800))
+mat[, "global_consumption"] <- floor(qunif(mat[, "global_consumption"], 3391, 5349))
+mat[, "planetary_boundary"] <- floor(qunif(mat[, "planetary_boundary"], 4000, 6000))
+
+# RUN MODELS ####################################################################
+
+land_runoff <- mat[, "precipitation"] - mat[, "global_green_water_consumption"] - 
+  mat[, "green_water_consumption_crops"]
+
+exceedance <-  mat[, "planetary_boundary"] - mat[, "global_consumption"] 
+
+# ARRANGE DATA #################################################################
+
+dt <- cbind(land_runoff, exceedance) %>%
+  data.table() %>%
+  .[1:(2 * N)] %>%
+  .[, outside:= ifelse(land_runoff < land_runoff_min |
+                         land_runoff > land_runoff_max, "Yes", "No")] %>%
+  .[, accessible_water_runoff:= land_runoff - 7800 - 20400] %>%
+  .[, outside_runoff:= ifelse(accessible_water_runoff < 12500 | 
+                                accessible_water_runoff > 18500, "Yes", "No")] %>%
+  .[, water_deficit:= ifelse(exceedance < 0, "Yes", "No")]
+
+  
+# SOME STATS ###################################################################
+
+cols <- c("land_runoff", "accessible_water_runoff", "exceedance")
+summary_fun = function(x) list(min = min(x), max = max(x))
+dt[, lapply(.SD, summary_fun), .SDcols = (cols)]
+
+
+tmp <- melt(dt, measure.vars = c("outside", "outside_runoff", "water_deficit")) %>%
+  .[, .N, .(variable, value)]
+
+tmp[, total:= (2^12 * 2)] %>%
+  .[, prop:= N / total] %>%
+  print()
+
+# PLOT LAND RUNOFF DISTRIBUTION ################################################
+
+plot_land_runoff <- ggplot(dt, aes(land_runoff, fill = outside)) +
+  geom_histogram(colour = "black") +
+  scale_fill_manual(values = c("white", "grey")) +
+  theme_AP() + 
+  geom_vline(xintercept = land_runoff_estimate, color = "red", lty = 2, size = 2) +
+  labs(x = "Global land runoff \n (km$^3$/year)", y = "Counts") +
+  theme(legend.position = "none")
+
+plot_land_runoff
+
+plot_accessible_runoff <- ggplot(dt, aes(accessible_water_runoff, fill = outside_runoff)) +
+  geom_histogram(colour = "black") +
+  scale_fill_manual(values = c("white", "grey")) +
+  theme_AP() + 
+  labs(x = "Accessible blue water runoff \n (km$^3$/year)", y = "") +
+  theme(legend.position = "none")
+
+plot_accessible_runoff
+
+vec <- data.table(fraction.irrig = 1600 / dt$accessible_water_runoff)
+
+plot.irrigation <- ggplot(vec, aes(fraction.irrig)) +
+  geom_histogram(fill = "grey", color = "black") + 
+  labs(x = "Fraction consumed \n by irrigation", y = "") +
+  theme_AP()
+
+plot.irrigation
+
+plot.exceedance <- ggplot(dt, aes(exceedance, fill = water_deficit)) +
+  geom_histogram(color = "black") +
+  scale_fill_manual(values = c("grey", "#F8766D"), 
+                    name = "Water limit \n exceedance") +
+  labs(x = "km$^3$/yr", y = "Counts") +
+  theme_AP() +
+  theme(legend.position = c(0.22, 0.73))
+
+plot.exceedance
+```
+
+```{r merge_plots, dependson="calculations", fig.height=4, fig.width=4.3}
+
+# MERGE PLOTS ##################################################################
+
+top <- plot_grid(plot_land_runoff, plot_accessible_runoff, labels = c("a", ""))
+bottom <- plot_grid(plot.irrigation, plot.exceedance, labels = c("b", "c"), 
+                    rel_widths = c(0.4, 0.6))
+plot_grid(top, bottom, ncol = 1)
+
+```
+
+\newpage
