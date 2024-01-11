@@ -1,5 +1,5 @@
 ---
-title: "Code of Fallacies in the Global Water Crisis statistics"
+title: "The water crisis narrative of the Global Commission on the Economics of Water lacks scientific rigor"
 subtitle: "R code"
 author: "Arnald Puy"
 header-includes:
@@ -15,7 +15,7 @@ output:
   pdf_document:
     fig_caption: yes
     number_sections: yes
-    toc: yes
+    toc: no
     toc_depth: 2
     keep_tex: true
   word_document:
