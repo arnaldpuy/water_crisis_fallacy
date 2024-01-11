@@ -1,4 +1,6 @@
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.8074499.svg)](https://doi.org/10.5281/zenodo.8074499)
+
 # The water crisis narrative of the Global Commission on the Economics of Water lacks scientific rigor 
 
 Arnald Puy & Bruce A. Lankford
