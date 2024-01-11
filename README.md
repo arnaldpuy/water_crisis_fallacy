@@ -1,5 +1,5 @@
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.8074499.svg)](https://doi.org/10.5281/zenodo.8074499)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10492786.svg)](https://doi.org/10.5281/zenodo.10492786)
 
 # The water crisis narrative of the Global Commission on the Economics of Water lacks scientific rigor 
 
