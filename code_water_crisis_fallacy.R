@@ -41,26 +41,20 @@ land_runoff_max <- land_runoff_estimate + (land_runoff_estimate  * 0.1)
 
 # RETRIEVE DATA FOR KILOCALORIES ##############################################
 
-# Read the HTML content of the website 
-webpage <- read_html("https://en.wikipedia.org/wiki/List_of_countries_by_food_energy_intake#cite_note-8") 
+food.fraction <- fread("daily-per-capita-caloric-supply.csv")
+old_colnames <- colnames(food.fraction)
+new_colnames <- c("entity", "code", "year", "kcal")
+setnames(food.fraction, old_colnames, new_colnames)
+food.fraction <- food.fraction[year == 2018]
+food.fraction <- food.fraction[!entity %in% c("High-income countries", "Low-income countries", 
+                                              "Lower-middle-income countries", "South America", 
+                                              "Upper-middle-income countries")]
 
-# Select the table using CSS selector 
-table_node <- html_nodes(webpage, "table") 
+# Check best distribution ------------------------------------------------------
 
-# Extract the table content 
-table_content <- data.table(html_table(table_node, header = TRUE)[[1]]) %>%
-  row_to_names(row_number = 1)
-
-# Arrange and clean columns ----------------------------------------------------
-old_colnames <- colnames(table_content)
-new_colnames <- c("rank", "country", "kcal", "year")
-setnames(table_content, old_colnames, new_colnames)
-table_content[, kcal:= as.numeric(gsub(",", "", kcal))]
-
-# Check best distribution
-fg <- fitdist(table_content$kcal, "gamma")
-fln <- fitdist(table_content$kcal, "lnorm")
-fw <- fitdist(table_content$kcal, "weibull")
+fg <- fitdist(food.fraction$kcal, "gamma")
+fln <- fitdist(food.fraction$kcal, "lnorm")
+fw <- fitdist(food.fraction$kcal, "weibull")
 
 # Plot goodness of fit ---------------------------------------------------------
 par(mfrow = c(2, 2))
@@ -73,8 +67,8 @@ ppcomp(list(fg, fln, fw), legendtext = plot.legend)
 # Opt for truncated weibull ----------------------------------------------------
 shape <- fw$estimate[[1]]
 scale <- fw$estimate[[2]]
-minimum <- min(table_content$kcal)
-maximum <- max(table_content$kcal)
+minimum <- min(food.fraction$kcal)
+maximum <- max(food.fraction$kcal)
 weibull_dist <- sapply(c(minimum, maximum), function(x)
   pweibull(x, shape = shape, scale = scale))
 
@@ -136,8 +130,8 @@ fun_exceedance_2023 <- function(mat) mat[, "W_g"] + mat[, "F_i"] * mat[, "W_i"] 
 
 projection_fun <- function(mat, P) {
   
-  W <- 365 * (mat[, "$k$"] * mat[, "$F_m$"] * mat[, "$F_{m_w}$"] + 
-                mat[, "$k$"] * mat[, "F_v"] * mat[, "$F_{v_w}$"]) / 1000
+  W <- (365 * (mat[, "$k$"] * mat[, "$F_m$"] * mat[, "$F_{m_w}$"] + 
+                mat[, "$k$"] * mat[, "F_v"] * mat[, "$F_{v_w}$"])) / 1000
   
   y <- P * mat[, "F_b"] * W
   
