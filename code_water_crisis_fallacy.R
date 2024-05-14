@@ -151,6 +151,8 @@ exceedance_2023 <-  -1 * (mat[, "planetary_boundary"] - mat[, "global_consumptio
 population <- c(8, 9.7)
 y <- lapply(population, function(P) projection_fun(mat = mat, P = P))
 
+max(y[[1]]$W)
+
 # ARRANGE DATA #################################################################
 
 tmp <- lapply(y, function(x) data.table(do.call(cbind, x)))

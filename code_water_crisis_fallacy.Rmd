@@ -1,5 +1,5 @@
 ---
-title: "The water crisis narrative of the Global Commission on the Economics of Water lacks scientific rigor"
+title: "The Water Crisis by the Global Commission on the Economics of Water: A Totalising Narrative Built on Shaky Numbers"
 subtitle: "R code"
 author: "Arnald Puy"
 header-includes:
@@ -431,7 +431,12 @@ plot_grid(top, bottom, ncol = 1)
 
 ########
 
-plot_grid(plot_land_runoff, plot_accessible_runoff, ncol = 2)
+plot_grid(plot_land_runoff + 
+            scale_x_continuous(labels = scales::comma) +
+            theme(plot.margin = unit(c(0.2, 0.45, 0.2, 0.2), "cm")),
+          plot_accessible_runoff + 
+            scale_x_continuous(labels = scales::comma), 
+          ncol = 2)
 ```
 
 ```{r merge_figures5, dependson="rest", fig.height=5, fig.width=4.2, warning=FALSE}
